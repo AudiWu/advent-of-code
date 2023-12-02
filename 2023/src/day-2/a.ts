@@ -1,68 +1,116 @@
 import { readData } from '../utils';
 import chalk from 'chalk';
 
-export const DRAW_SCORE = 3;
-export const WIN_SCORE = 6;
+enum Color {
+  RED = 'red',
+  GREEN = 'green',
+  BLUE = 'blue',
+}
 
-export const ROCK = 1;
-export const PAPER = 2;
-export const SCISSORS = 3;
+type Cubes = {
+  red: number;
+  green: number;
+  blue: number;
+};
+
+type Game = {
+  id: number;
+  isSatisfiesConfig: boolean;
+  maxCubes: Cubes;
+  total: number;
+};
+
+const BAG_OF_CUBES_LIMIT = {
+  red: 12,
+  green: 13,
+  blue: 14,
+};
 
 export async function day2a(dataPath?: string) {
   const data = await readData(dataPath);
-  const moves = parseInput(data);
-  const score = moves.map(getScore).reduce((acc, curr) => acc + curr, 0);
-  return score;
+  const games = transformToGameData(data);
+  const filterGamesByCubesLimit = games.filter(
+    (game) => game.isSatisfiesConfig === true
+  );
+  const sum = filterGamesByCubesLimit.reduce((acc, curr) => acc + curr.id, 0);
+
+  return sum;
 }
 
-function getScore({ ourMove, theirMove }: Move): number {
-  let score = 0;
-  if (ourMove === 'rock') {
-    score += 1;
-  } else if (ourMove === 'paper') {
-    score += 2;
-  } else if (ourMove === 'scissors') {
-    score += 3;
-  }
-  if (ourMove === theirMove) {
-    score += DRAW_SCORE;
-  }
-  switch (ourMove) {
-    case 'rock':
-      score += theirMove === 'scissors' ? WIN_SCORE : 0;
-      break;
-    case 'paper':
-      score += theirMove === 'rock' ? WIN_SCORE : 0;
-      break;
-    case 'scissors':
-      score += theirMove === 'paper' ? WIN_SCORE : 0;
-      break;
-  }
-  return score;
-}
+export function transformToGameData(data: string[]): Game[] {
+  const newData = [];
 
-type Choice = 'rock' | 'paper' | 'scissors';
+  for (const line of data) {
+    const initialGameData: Game = {
+      id: 0,
+      isSatisfiesConfig: true,
+      maxCubes: {
+        red: 0,
+        green: 0,
+        blue: 0,
+      },
+      total: 0,
+    };
 
-type Move = { ourMove: Choice; theirMove: Choice };
+    const splitByGameId = line.split(': ');
+    const gameValues = splitByGameId[0].split(' ');
+    const gameId = Number(gameValues[1]);
+    const sets = splitByGameId[1].split('; ');
 
-function parseInput(input: string[]): Move[] {
-  return input.map((inputStr) => {
-    const [theirInput, ourInput] = inputStr.split(' ');
-    const [ourMove, theirMove] = [ourInput, theirInput].map((input) => {
-      switch (input) {
-        case 'A':
-        case 'X':
-          return 'rock' as const;
-        case 'B':
-        case 'Y':
-          return 'paper' as const;
-        case 'C':
-        case 'Z':
-          return 'scissors' as const;
+    initialGameData.id = Number(gameId);
+
+    for (const set of sets) {
+      const cubes = set.split(', ');
+
+      for (const cube of cubes) {
+        const values = cube.split(' ');
+        const cubeValue = Number(values[0]);
+        const cubeColor = values[1];
+
+        if (cubeColor === Color.RED) {
+          initialGameData.maxCubes.red = Math.max(
+            initialGameData.maxCubes.red,
+            cubeValue
+          );
+
+          if (!(cubeValue <= BAG_OF_CUBES_LIMIT.red)) {
+            initialGameData.isSatisfiesConfig = false;
+          }
+        }
+
+        if (cubeColor === Color.GREEN) {
+          initialGameData.maxCubes.green = Math.max(
+            initialGameData.maxCubes.green,
+            cubeValue
+          );
+
+          if (!(cubeValue <= BAG_OF_CUBES_LIMIT.green)) {
+            initialGameData.isSatisfiesConfig = false;
+          }
+        }
+
+        if (cubeColor === Color.BLUE) {
+          initialGameData.maxCubes.blue = Math.max(
+            initialGameData.maxCubes.blue,
+            cubeValue
+          );
+
+          if (!(cubeValue <= BAG_OF_CUBES_LIMIT.blue)) {
+            initialGameData.isSatisfiesConfig = false;
+          }
+        }
       }
-    });
-    return { ourMove, theirMove };
-  });
+    }
+
+    initialGameData.total =
+      initialGameData.maxCubes.red *
+      initialGameData.maxCubes.green *
+      initialGameData.maxCubes.blue;
+
+    newData.push(initialGameData);
+  }
+
+  return newData;
 }
 
 // don't change below this line
