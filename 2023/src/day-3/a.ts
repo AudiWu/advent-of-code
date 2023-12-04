@@ -3,102 +3,123 @@ import chalk from 'chalk';
 
 export async function day3a(dataPath?: string) {
   const data = await readData(dataPath);
-  const ruckSacks = parseInput(data);
-  const sharedItems = ruckSacks.map((ruckSack) => findSharedItem(ruckSack));
-  console.log(sharedItems);
-  const score = sharedItems
-    .map((sharedItem) => scoreMap[sharedItem])
-    .reduce((acc, item) => acc + item, 0);
-  return score;
+  const grid = transformLineToArray(data);
+  const parts = getSymbolAdjacentNumbers(grid);
+  const sum = parts.reduce((acc, curr) => acc + curr, 0);
+  return sum;
 }
 
-const scoreMap = {
-  a: 1,
-  b: 2,
-  c: 3,
-  d: 4,
-  e: 5,
-  f: 6,
-  g: 7,
-  h: 8,
-  i: 9,
-  j: 10,
-  k: 11,
-  l: 12,
-  m: 13,
-  n: 14,
-  o: 15,
-  p: 16,
-  q: 17,
-  r: 18,
-  s: 19,
-  t: 20,
-  u: 21,
-  v: 22,
-  w: 23,
-  x: 24,
-  y: 25,
-  z: 26,
-  A: 27,
-  B: 28,
-  C: 29,
-  D: 30,
-  E: 31,
-  F: 32,
-  G: 33,
-  H: 34,
-  I: 35,
-  J: 36,
-  K: 37,
-  L: 38,
-  M: 39,
-  N: 40,
-  O: 41,
-  P: 42,
-  Q: 43,
-  R: 44,
-  S: 45,
-  T: 46,
-  U: 47,
-  V: 48,
-  W: 49,
-  X: 50,
-  Y: 51,
-  Z: 52,
-};
+const isDigit = (char: string) => /[0-9]/.test(char);
 
-function findSharedItem({
-  firstCompartment,
-  secondCompartment,
-}: RuckSack): string {
-  const firstCompartmentMap = firstCompartment.split('').reduce((acc, item) => {
-    acc[item] = true;
-    return acc;
-  }, {});
-  for (const item of secondCompartment.split('')) {
-    if (firstCompartmentMap[item]) {
-      return item;
+const isSymbol = (char: string) => char !== '.' && !isDigit(char);
+
+const isGear = (char: string) => char === '*';
+
+export function transformLineToArray(data: string[]): string[][] {
+  const array = [];
+
+  for (const line of data) {
+    const splitLine = line.split('');
+
+    array.push(splitLine);
+  }
+
+  return array;
+}
+
+export function getSymbolAdjacentNumbers(grid: string[][]): number[] {
+  const result = [];
+
+  eachMatrix(grid, (char, coords) => {
+    if (isSymbol(char)) {
+      eachSurrounding(grid, coords, (adj, adjCoords) => {
+        if (isDigit(adj)) {
+          result.push(extractNumber(grid, adjCoords));
+        }
+      });
+    }
+  });
+
+  return result;
+}
+
+export function getRatios(grid: string[][]): number[] {
+  const ratios = [];
+
+  eachMatrix(grid, (char, coords) => {
+    if (isGear(char)) {
+      const parts = [];
+
+      eachSurrounding(grid, coords, (adj, adjCoords) => {
+        if (isDigit(adj)) {
+          parts.push(extractNumber(grid, adjCoords));
+        }
+      });
+
+      if (parts.length === 2) {
+        ratios.push(parts[0] * parts[1]);
+      }
+    }
+  });
+
+  return ratios;
+}
+
+export function extractNumber(
+  grid: string[][],
+  [x, y]: [number, number]
+): number {
+  let number = '';
+  let pos = x;
+
+  while (isDigit(grid[y][pos])) {
+    pos -= 1;
+  }
+
+  pos += 1;
+
+  while (isDigit(grid[y][pos])) {
+    number += grid[y][pos];
+    grid[y][pos] = 'X';
+    pos += 1;
+  }
+
+  return Number(number);
+}
+
+export function eachMatrix(matrix: string[][], callbackFn: (...any) => void) {
+  for (let y = 0; y < matrix.length; y++) {
+    for (let x = 0; x < matrix[y].length; x++) {
+      callbackFn(matrix[y][x], [x, y], matrix);
     }
   }
-  throw new Error('no matches');
 }
 
-type RuckSack = {
-  firstCompartment: string;
-  secondCompartment: string;
-};
+export function hasProp(val, prop) {
+  if (val == null) {
+    return false;
+  }
 
-function parseInput(input: string[]): RuckSack[] {
-  return input.map((inputStr) => {
-    const [firstCompartment, secondCompartment] = [
-      inputStr.slice(0, inputStr.length / 2),
-      inputStr.slice(inputStr.length / 2),
-    ];
-    return {
-      firstCompartment,
-      secondCompartment,
-    };
-  });
+  return Object.hasOwnProperty.call(val, prop);
+}
+
+export function callAtCoords(matrix, coords, callFn) {
+  const [x, y] = coords;
+
+  if (hasProp(matrix, y) && hasProp(matrix[y], x)) {
+    callFn(matrix[y][x], coords, matrix);
+  }
+}
+
+export function eachSurrounding(matrix, [x, y], eachFn) {
+  callAtCoords(matrix, [x, y - 1], eachFn);
+  callAtCoords(matrix, [x + 1, y - 1], eachFn);
+  callAtCoords(matrix, [x + 1, y], eachFn);
+  callAtCoords(matrix, [x + 1, y + 1], eachFn);
+  callAtCoords(matrix, [x, y + 1], eachFn);
+  callAtCoords(matrix, [x - 1, y + 1], eachFn);
+  callAtCoords(matrix, [x - 1, y], eachFn);
+  callAtCoords(matrix, [x - 1, y - 1], eachFn);
 }
 
 // don't change below this line
