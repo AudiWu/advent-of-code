@@ -1,54 +1,55 @@
 import { readData } from '../utils';
 import chalk from 'chalk';
 
+type CardData = {
+  owned: number[];
+  point: number;
+};
+
 export async function day4a(dataPath?: string) {
   const data = await readData(dataPath);
-  const pairs = parseInput(data);
-  console.log(pairs);
-  const results = pairs.map(totallyEncompassed);
-  console.log(results);
-  return results.reduce((acc, item) => acc + item, 0);
+  const transformedData = transformToScratchcardsData(data);
+  console.log(transformedData);
+  const sum = transformedData.reduce((acc, curr) => acc + curr.point, 0);
+  return sum;
 }
 
-function totallyEncompassed(pair: Pair): 0 | 1 {
-  const sortedAssignments = [pair.first, pair.second].sort(
-    (a, b) => b.length - a.length
-  );
-  const [first, second] = sortedAssignments;
-  const firstMap = first.reduce((acc, item) => {
-    acc[item] = true;
-    return acc;
-  }, {});
-  for (const item of second) {
-    if (!firstMap[item]) {
-      return 0;
+export function transformToScratchcardsData(data: string[]) {
+  const cardDatas: CardData[] = [];
+
+  for (const line of data) {
+    {
+      const cardData: CardData = {
+        owned: [],
+        point: 0,
+      };
+      const ownedData = [];
+
+      const splitById = line.split(': ');
+      const getCardData = splitById[1].split(' | ');
+      const matches = getCardData[0].split(' ');
+      const owned = getCardData[1].split(' ');
+
+      for (const own of owned) {
+        if (matches.includes(own)) {
+          ownedData.push(Number(own));
+        }
+      }
+
+      const filterOwnedData = ownedData.filter((data) => data !== 0);
+
+      cardData.owned = filterOwnedData;
+      cardData.point = 2 ** (cardData.owned.length - 1);
+      cardDatas.push(cardData);
     }
   }
-  return 1;
+
+  const filterCardDatas = cardDatas.filter((data) => data.owned.length !== 0);
+
+  return filterCardDatas;
 }
 
-type Pair = { first: number[]; second: number[] };
 
-function parseInput(input: string[]): Pair[] {
-  return input.map(parseLine);
-}
-
-function parseLine(input: string): Pair {
-  const [firstInput, secondInput] = input.split(',');
-  const [firstStarter, firstEnder] = firstInput.split('-').map((item) => +item);
-  const first: number[] = [];
-  for (let i = firstStarter; i <= firstEnder; i++) {
-    first.push(i);
-  }
-  const [secondStarter, secondEnder] = secondInput
-    .split('-')
-    .map((item) => +item);
-  const second: number[] = [];
-  for (let i = secondStarter; i <= secondEnder; i++) {
-    second.push(i);
-  }
-  return { first, second };
-}
 
 // don't change below this line
 // this makes sure we don't call the function when we import it for tests
