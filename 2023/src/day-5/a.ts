@@ -1,66 +1,117 @@
-import { readData } from '../utils';
 import chalk from 'chalk';
+import { readData } from '../utils';
 
 export async function day5a(dataPath?: string) {
   const data = await readData(dataPath);
-  const { stacks, instructions } = parseData(data);
-  let currentStacks = stacks;
-  for (const instruction of instructions) {
-    for (let i = 0; i < instruction.count; i++) {
-      currentStacks = performInstructions(currentStacks, instruction);
+  const seedArray = data[0].split(': ')[1].split(/\s+/).map(Number);
+
+  const startingLines = {
+    Seed: 0,
+    Soil: 0,
+    Fertilizer: 0,
+    Water: 0,
+    Light: 0,
+    Temp: 0,
+    Humidity: 0,
+  };
+
+  for (let i = 1; i < data.length; i++) {
+    switch (data[i]) {
+      case 'seed-to-soil map:':
+        startingLines['Seed'] = i;
+        break;
+      case 'soil-to-fertilizer map:':
+        startingLines['Soil'] = i;
+        break;
+      case 'fertilizer-to-water map:':
+        startingLines['Fertilizer'] = i;
+        break;
+      case 'water-to-light map:':
+        startingLines['Water'] = i;
+        break;
+      case 'light-to-temperature map:':
+        startingLines['Light'] = i;
+        break;
+      case 'temperature-to-humidity map:':
+        startingLines['Temp'] = i;
+        break;
+      case 'humidity-to-location map:':
+        startingLines['Humidity'] = i;
+        break;
     }
   }
-  return getAnswer(currentStacks);
-}
 
-function getAnswer(stacks: Data['stacks']): string {
-  const answerArr: string[] = [];
-  for (const key in stacks) {
-    answerArr.push(stacks[key][stacks[key].length - 1]);
+  let minLocation = Number.MAX_SAFE_INTEGER;
+
+  for (const seed of seedArray) {
+    let currentLoc = seed;
+
+    currentLoc = getNextDestination(
+      currentLoc,
+      startingLines['Seed'] + 1,
+      startingLines['Soil'] - 1,
+      data
+    );
+    currentLoc = getNextDestination(
+      currentLoc,
+      startingLines['Soil'] + 1,
+      startingLines['Fertilizer'] - 1,
+      data
+    );
+    currentLoc = getNextDestination(
+      currentLoc,
+      startingLines['Fertilizer'] + 1,
+      startingLines['Water'] - 1,
+      data
+    );
+    currentLoc = getNextDestination(
+      currentLoc,
+      startingLines['Water'] + 1,
+      startingLines['Light'] - 1,
+      data
+    );
+    currentLoc = getNextDestination(
+      currentLoc,
+      startingLines['Light'] + 1,
+      startingLines['Temp'] - 1,
+      data
+    );
+    currentLoc = getNextDestination(
+      currentLoc,
+      startingLines['Temp'] + 1,
+      startingLines['Humidity'] - 1,
+      data
+    );
+    currentLoc = getNextDestination(
+      currentLoc,
+      startingLines['Humidity'] + 1,
+      data.length,
+      data
+    );
+
+    minLocation = Math.min(minLocation, currentLoc);
   }
-  return answerArr.join('');
+
+  return minLocation;
 }
 
-function performInstructions(
-  stack: Data['stacks'],
-  { removeFrom, addTo }: { removeFrom: number; addTo: number }
-): Data['stacks'] {
-  const copy = {};
-  for (const key in stack) {
-    copy[key] = [...stack[key]];
+const getNextDestination = (
+  id: number,
+  startingLine: number,
+  endingLine: number,
+  lines: string[]
+) => {
+  for (let lineNum = startingLine; lineNum < endingLine; lineNum++) {
+    const [destStart, sourceStart, span] = lines[lineNum]
+      .split(/\s+/, 3)
+      .map(Number);
+
+    if (id >= sourceStart && id < sourceStart + span) {
+      return destStart + (id - sourceStart);
+    }
   }
-  const removed = copy[removeFrom].pop();
-  copy[addTo].push(removed);
-  return copy;
-}
-
-type Data = {
-  stacks: Record<number, string[]>;
-  instructions: { removeFrom: number; count: number; addTo: number }[];
+  return id;
 };
-
-function parseData(data: string[]): Data {
-  const stacksArr = [];
-  const instructions = [];
-  let emptyLineEncountered = false;
-  for (const line of data) {
-    if (line === '') {
-      emptyLineEncountered = true;
-      continue;
-    }
-    if (!emptyLineEncountered) {
-      stacksArr.push(line.split(' '));
-    } else {
-      const [count, removeFrom, addTo] = line.split(' ').map((str) => +str);
-      instructions.push({ count, removeFrom, addTo });
-    }
-  }
-  const stacks: Record<number, string[]> = {};
-  for (let i = 0; i < stacksArr.length; i++) {
-    stacks[i + 1] = stacksArr[i];
-  }
-  return { stacks, instructions };
-}
 
 // don't change below this line
 // this makes sure we don't call the function when we import it for tests
