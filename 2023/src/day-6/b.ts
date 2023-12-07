@@ -1,20 +1,22 @@
 import { readData } from '../utils';
 import chalk from 'chalk';
+import { getRecordWays } from './a';
 
 export async function day6b(dataPath?: string) {
   const data = await readData(dataPath);
-  const input = data[0].split('');
-  for (let i = 13; i < input.length; i += 1) {
-    const lastSet = [];
-    for (let j = 0; j < 14; j += 1) {
-      lastSet.push(input[i - j]);
-    }
-    const unique = new Set(lastSet);
-    console.log(unique);
-    if (unique.size === 14) {
-      return i + 1;
-    }
-  }
+  const times = [
+    Number(
+      data[0].replace(/\s+/g, '').replace('Time:', '').split(',').join('')
+    ),
+  ];
+  const distances = [
+    Number(
+      data[1].replace(/\s+/g, '').replace('Distance:', '').split(',').join('')
+    ),
+  ];
+  const record = getRecordWays(times, distances);
+  const total = record.reduce((acc, curr) => acc * curr, 1);
+  return total;
 }
 
 // don't change below this line
