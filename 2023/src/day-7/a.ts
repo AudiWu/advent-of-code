@@ -1,92 +1,56 @@
 import { readData } from '../utils';
 import chalk from 'chalk';
 
-const SIZE_LIMIT = 100000;
+export type Hand = { cards: string; bid: number; kinds: number[] };
+export type CardCounts = Record<string, number>;
+
+const RANKS = 'AKQJT98765432'.split('');
 
 export async function day7a(dataPath?: string) {
   const data = await readData(dataPath);
-  const fileSystem = parseDirectory(data);
-  console.log(fileSystem);
-  const smallEnoughDirs = getSmallEnoughDirs(fileSystem);
-  const answer = getSumOfSizes(smallEnoughDirs);
-  return answer;
+  const toKinds = (counts: CardCounts) => Object.values(counts);
+  console.log(toKinds);
+  return data
+    .map(lineToHand(toKinds))
+    .toSorted(compare(RANKS))
+    .reduce((sum, { bid }, i) => sum + bid * (i + 1), 0);
 }
 
-function getSumOfSizes(smallEnoughDirs: { dirName: string; size: number }[]) {
-  return smallEnoughDirs.map(({ size }) => size).reduce((a, b) => a + b, 0);
-}
-
-function getSmallEnoughDirs(
-  fileSystem: Record<
-    string,
-    { dirNames: string[]; files: { name: string; size: number }[] }
-  >
-): { dirName: string; size: number }[] {
-  const smallEnough: { dirName: string; size: number }[] = [];
-  for (const [dirName, { files }] of Object.entries(fileSystem)) {
-    const allFiles = [...files];
-    for (const otherDirName of Object.keys(fileSystem)) {
-      if (otherDirName !== dirName && otherDirName.startsWith(dirName)) {
-        allFiles.push(...fileSystem[otherDirName].files);
-      }
+export function compare(cardRanks: string[]) {
+  return (h1: Hand, h2: Hand) => {
+    for (let i = 0; i < 5; i++) {
+      if (!h1.kinds[i] || !h2.kinds[i]) break;
+      if (h1.kinds[i] > h2.kinds[i]) return 1;
+      if (h1.kinds[i] < h2.kinds[i]) return -1;
     }
-    const size = allFiles.map(({ size }) => size).reduce((a, b) => a + b, 0);
-    if (size < SIZE_LIMIT) {
-      smallEnough.push({ dirName, size });
+
+    for (let i = 0; i < 5; i++) {
+      if (cardRanks.indexOf(h1.cards[i]) < cardRanks.indexOf(h2.cards[i]))
+        return 1;
+      if (cardRanks.indexOf(h1.cards[i]) > cardRanks.indexOf(h2.cards[i]))
+        return -1;
     }
-  }
-  return smallEnough;
+
+    return 0;
+  };
 }
 
-interface Directory {
-  files: { name: string; size: number }[];
-  directories: Directory[];
-}
+export function lineToHand(toKinds: (arg0: CardCounts) => number[]) {
+  return (line: string) => {
+    const [cards, bid] = line.split(' ');
+    const counts: CardCounts = {};
 
-function parseDirectory(
-  input: string[]
-): Record<
-  string,
-  { dirNames: string[]; files: { name: string; size: number }[] }
-> {
-  let currentPath = '/';
-  let i = 0;
-  const pathMap: Record<
-    string,
-    { dirNames: string[]; files: { name: string; size: number }[] }
-  > = {};
-  while (i < input.length) {
-    const line = input[i];
-    if (line.startsWith('$ cd')) {
-      if (line.startsWith('$ cd /')) {
-        currentPath = '/';
-      } else if (line.startsWith('$ cd ..')) {
-        currentPath = currentPath.slice(0, currentPath.lastIndexOf('/'));
-      } else {
-        currentPath = `${currentPath}${
-          currentPath === '/' ? '' : '/'
-        }${line.slice(5)}`;
-      }
-      i++;
-    } else if (line.startsWith('$ ls')) {
-      const dirNames: string[] = [];
-      const files: { name: string; size: number }[] = [];
-      i++;
-      while (input[i] && !input[i].startsWith('$')) {
-        if (input[i].startsWith('dir')) {
-          dirNames.push(input[i].slice(4));
-        } else {
-          const [size, name] = input[i].split(' ');
-          files.push({ name, size: +size });
-        }
-        i++;
-      }
-      pathMap[currentPath] = { dirNames, files };
+    for (let i = 0; i < cards.length; i++) {
+      if (counts[cards[i]]) counts[cards[i]]++;
+      else counts[cards[i]] = 1;
     }
-  }
-  // console.log(pathMap);
-  return pathMap;
-  // return { files: [], directories: [] };
+
+    const kinds = toKinds(counts);
+
+    kinds.sort((a, b) => b - a);
+    
+    return { cards, kinds, bid: Number(bid) };
+  };
 }
 
 // don't change below this line
