@@ -1,96 +1,72 @@
+/* eslint-disable prefer-const */
 import { readData } from '../utils';
 import chalk from 'chalk';
 
-export async function day8a(dataPath?: string) {
-  const data = await readData(dataPath);
-  const grid = parseInput(data);
-  console.log(grid);
-  return getVisibleCount(grid);
-}
-
-function getVisibleCount(grid: Grid): number {
-  let count = 0;
-  const isVisibleMap: Record<number, Record<number, boolean>> = {};
-  for (let i = 0; i < grid.height; i++) {
-    isVisibleMap[i] = {};
-    for (let j = 0; j < grid.width; j++) {
-      const isTreeVisible = isVisible(grid, j, i);
-      isVisibleMap[i][j] = isTreeVisible ? true : false;
-      count += isTreeVisible;
-    }
-  }
-  console.log(isVisibleMap);
-  return count;
-}
-
-function isVisible(grid: Grid, x: number, y: number): 0 | 1 {
-  if (x === 0 || x === grid.width) {
-    return 1;
-  }
-  if (y === 0 || y === grid.height) {
-    return 1;
-  }
-  function isVisibleFromNorth() {
-    for (let i = y - 1; i >= 0; i--) {
-      if (grid.data[i][x] >= grid.data[y][x]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  function isVisibleFromSouth() {
-    for (let i = y + 1; i < grid.height; i++) {
-      if (grid.data[i][x] >= grid.data[y][x]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  function isVisibleFromEast() {
-    for (let i = x + 1; i < grid.width; i++) {
-      if (grid.data[y][i] >= grid.data[y][x]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  function isVisibleFromWest() {
-    for (let i = x - 1; i >= 0; i--) {
-      if (grid.data[y][i] >= grid.data[y][x]) {
-        return false;
-      }
-    }
-    return true;
-  }
-  return isVisibleFromEast() ||
-    isVisibleFromNorth() ||
-    isVisibleFromSouth() ||
-    isVisibleFromWest()
-    ? 1
-    : 0;
-}
-
-type Grid = {
-  height: number;
-  width: number;
-  data: Record<number, Record<number, number>>;
+type Node = {
+  parent: string;
+  children: {
+    left: string;
+    right: string;
+  };
+  stepValue: string;
 };
 
-function parseInput(input: string[]): Grid {
-  const data: Grid['data'] = {};
-  for (let i = 0; i < input.length; i++) {
-    data[i] = {};
-    const line = input[i];
-    const trees = line.split('').map((str) => +str);
-    for (let j = 0; j < trees.length; j++) {
-      data[i][j] = trees[j];
+export async function day8a(dataPath?: string) {
+  const data = await readData(dataPath);
+  const [instruction, _, ...nodes] = data;
+  const instructionArray = instruction.split('');
+  const transformNodesData = getNodesData(nodes);
+  const steps = getSteps(instructionArray, transformNodesData);
+  return steps;
+}
+
+export function getNodesData(nodes: string[]): Node[] {
+  return nodes.map((node) => {
+    const splitNode = node.split(' = ');
+    const parent = splitNode[0];
+    const children = splitNode[1].replace('(', '').replace(')', '').split(', ');
+    const left = children[0];
+    const right = children[1];
+    return {
+      parent,
+      children: {
+        left,
+        right,
+      },
+      stepValue: '',
+    };
+  });
+}
+
+export function getSteps(instruction: string[], nodes: Node[]): number {
+  let steps = 0;
+  let stepValue = '';
+  let instructionIndex = 0;
+
+  while (stepValue !== 'ZZZ') {
+    let currentInstruction = instruction[instructionIndex % instruction.length];
+
+    if (stepValue === '') {
+      const firstNode = nodes.find((node) => node.parent === 'AAA');
+      stepValue =
+        currentInstruction === 'R'
+          ? firstNode.children.right
+          : firstNode.children.left;
+    } else {
+      const getNodeByStepValue = nodes.find(
+        (node) => node.parent === stepValue
+      );
+      stepValue =
+        currentInstruction === 'R'
+          ? getNodeByStepValue.children.right
+          : getNodeByStepValue.children.left;
     }
+
+    steps += 1;
+    instructionIndex += 1;
   }
-  return {
-    height: Object.keys(data).length,
-    width: Object.keys(data[0]).length,
-    data,
-  };
+
+  return steps;
 }
 
 // don't change below this line

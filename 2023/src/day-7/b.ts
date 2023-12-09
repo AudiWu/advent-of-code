@@ -20,7 +20,7 @@ export async function day7b(dataPath?: string) {
   
   return data
     .map(lineToHand(toKinds))
-    .toSorted(compare(RANKS))
+    .sort(compare(RANKS))
     .reduce((sum, { bid }, i) => sum + bid * (i + 1), 0);
 }
 
